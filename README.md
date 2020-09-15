@@ -1,6 +1,20 @@
 # ebook_spider
 一款简单的EPUB电子书在线爬虫工具，通过简单的定制修改就可以完成博客的电子书制作。
 
+## 安装
+> 本项目使用`Python3`实现
+
+```
+git clone https://github.com/learnhard-cn/ebook_spider.git
+cd ebook_spider
+pip3 install -r requirements.txt
+```
+
+依赖安装成功后，就可以使用了!
+
+当然,您也可以直接执行`python3 ./ebook_spider.py`示例，查看执行效果.
+
+如果遇到任何问题或者建议，也可以反馈给我.
 
 ## 使用方法
 
