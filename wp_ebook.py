@@ -9,7 +9,6 @@
 import re
 from bs4 import BeautifulSoup as bs
 from ebook_spider import Ebook
-import requests
 from multiprocessing.dummy import Pool as ThreadPool
 import multiprocessing as mp
 
