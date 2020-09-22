@@ -9,6 +9,7 @@
 import re
 from bs4 import BeautifulSoup as bs
 from ebook_spider import Ebook
+import requests
 from multiprocessing.dummy import Pool as ThreadPool
 import multiprocessing as mp
 
@@ -18,8 +19,6 @@ default_headers = {
     AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 \
     Safari/537.36'
 }
-
-
 
 
 class WordPressEbook(Ebook):
@@ -32,7 +31,6 @@ class WordPressEbook(Ebook):
         self.author = params['author']
         self.lang = params.get('lang', 'zh')
         self.identifier = params.get('id', 'id0001')
-        self.page_num = params.get('page_num', 5)   # 新增参数，用于拼接页数请求`{url}/page/{page}`
         self.outdir = outdir
         self.proxy = proxy
         self.opts = {}
@@ -48,8 +46,8 @@ class WordPressEbook(Ebook):
         '''
         soup = bs(text, "lxml")
         # 提取章列表
-        a_list = ['{}/page/{}'.format(self.url, a) for a in range(1, self.page_num+1)]
-        return a_list
+        section_list = []
+        return section_list
 
     def fetch_section_list(self, text):
         '''
@@ -61,9 +59,10 @@ class WordPressEbook(Ebook):
         '''
         soup = bs(text, "lxml")
         # 提取小节列表
-        a_list = soup.select(r'h2 > a')
+        a_list = soup.select(r'nav > ul > li.chapter > a')
         # 提取书/章节描述信息(用于生成简介)
-        section_list = [(a.get_text(), a.get('href')) for a in a_list]
+        section_list = [(a.get_text().encode('iso8859-1').decode('utf-8').strip(), self.url + '/' + a.get('href')) for a in a_list[3:]]
+        print(section_list)
         return section_list
 
     def fetch_content(self, text):
@@ -76,24 +75,21 @@ class WordPressEbook(Ebook):
         """
         try:
             soup = bs(text, 'lxml')
-            title = '<h1>' + soup.title.text + '</h1>\n'
-            content = soup.find('div', 'entry-content')
-            if content is None:
-                content = soup.find('article')
-            return title + content.prettify()
+            content = '<h1>' + str(soup.title) + '</h1>\n'
+            content = soup.find('section').prettify()
+            return content
         except Exception as e:
-            print(e)
+            print(str(e))
         return None
 
 
 if __name__ == '__main__':
     start_urls = [
         {
-            'url': 'https://www.learnhard.cn/',
-            'page_num': 3,
-            'book_name': '苦学网',
-            'author': 'learnhard.cn',
-            'id': 'learnhard',
+            'url': 'https://book.8btc.com/books/6/masterbitcoin2cn/_book/',
+            'book_name': '精通比特币',
+            'author': '8bit',
+            'id': '8bit',
             'lang': 'zh'
         },
     ]

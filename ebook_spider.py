@@ -12,7 +12,6 @@ from bs4 import BeautifulSoup as bs
 from lxml import etree
 from ebooklib import epub
 from ebooklib.plugins.base import BasePlugin
-from multiprocessing.dummy import Pool as ThreadPool
 
 
 # 自定义CSS样式
@@ -109,10 +108,7 @@ def req_get_info(url, headers=None, proxies="", retry=5, timeout=15):
         try:
             resp = requests.get(url, proxies=proxies, headers=headers, timeout=timeout)
             print(resp.status_code, url)
-            if resp.status_code == 200:
-                return resp
-            else:
-                return None
+            return resp
         except Exception as e:
             print('retry:', _, 'url:', url, 'proxies=', proxies, 'requests error:', str(e))
             time.sleep(0.5)
@@ -122,31 +118,52 @@ def req_get_info(url, headers=None, proxies="", retry=5, timeout=15):
 class ImagePlugin(BasePlugin):
     NAME = 'Image Plugin'
     url_doer = set()  # 重复URL地址记录器
+    img_idx = 0    # 命名图片编号
+
+    def __init__(self, proxy=""):
+        self.proxy = proxy
+
+    def fetch_image(self, doc, book, lable_xpath=r"//img", attr='src'):
+        '''图片链接下载'''
+        for _link in doc.xpath(lable_xpath):
+            img_url = _link.get(attr)
+            if not img_url.startswith('http'):
+                print(f"img_url:{img_url} invalid! not startswith http")
+                continue
+            print(f"xpath:{lable_xpath},attr:{attr}, img_url={img_url}")
+            if img_url not in self.url_doer:
+                self.url_doer.add(img_url)
+                resp = req_get_info(img_url, proxies=self.proxy)
+                if resp is None:
+                    continue
+                img_item = epub.EpubImage()
+                img_url = re.sub(r'\?.*', '', img_url)     # 过滤?及其后参数请求信息#
+                file_name = '{:03d}_{}'.format(
+                    self.img_idx, img_url.rsplit('/', maxsplit=1)[1]
+                )
+                img_item.file_name = file_name
+                self.img_idx += 1
+                img_item.set_content(resp.content)
+                book.add_item(img_item)
+                _link.set(attr, file_name)
+            else:
+                print("already downloaded url:", img_url)
+                img_url = re.sub(r'\?.*', '', img_url)     # 过滤?及其后参数请求信息#
+                file_name = '{:03d}_{}'.format(
+                    self.img_idx, img_url.rsplit('/', maxsplit=1)[1]
+                )
+                _link.set('src', file_name)
+        return doc
 
     def html_before_write(self, book, chapter):
         '''替换图片链接地址'''
         if chapter.content is None:
             return
         doc = etree.HTML(chapter.content)
-        for _link in doc.xpath("//img"):
-            img_url = _link.xpath('./@src')[0]
-            if not img_url.startswith('http'):
-                continue
-            if img_url not in self.url_doer:
-                self.url_doer.add(img_url)
-                resp = req_get_info(img_url)
-                if resp is None:
-                    continue
-                img_item = epub.EpubImage()
-                img_url = re.sub(r'\?.*', '', img_url)     # 过滤?及其后参数请求信息#
-                file_name = img_url.rsplit('/', maxsplit=1)[1]
-                img_item.file_name = file_name
-                img_item.set_content(resp.content)
-                book.add_item(img_item)
-                _link.set('src', file_name)
-                chapter.content = etree.tostring(doc, pretty_print=True, encoding='utf-8')
-            else:
-                print("already downloaded url:", img_url)
+        doc = self.fetch_image(doc, book, r'//object[@class="image__image"]', 'data')
+        doc = self.fetch_image(doc, book, '//img', 'src')
+        chapter.content = etree.tostring(
+            doc, pretty_print=True, encoding='utf-8')
 
 
 class Ebook(object):
@@ -222,7 +239,7 @@ class Ebook(object):
     def fetch_book(self):
         '''制作电子书主流程'''
         book = self.create_book()
-        self.set_plugin(ImagePlugin())
+        self.set_plugin(ImagePlugin(self.proxy))
         total_toc = self.fetch_all_chapter()
 
         for sec in total_toc:
@@ -261,7 +278,6 @@ class Ebook(object):
             conf['name'] = self.book_name
             conf['level'] = 0
         url = conf['url']
-        name = conf['name']
         level = conf['level']
         # 主页面
         total_toc = []
@@ -273,18 +289,12 @@ class Ebook(object):
         if len(ch_list) > 0:
             for ch_url in ch_list:
                 resp1 = req_get_info(ch_url, proxies=self.proxy)
-                if resp1 is None:
-                    # 访问了无效地址，默认后续也是失效，不再继续访问
-                    break
                 sec_list = self.fetch_section_list(resp1.text)
                 idx = 0  # 章节序号列表
                 level += 1
                 for sec_info in sec_list[:]:
                     stitle, surl = sec_info
                     resp2 = req_get_info(surl, proxies=self.proxy)
-                    if resp2 is None:
-                        # 过滤无效的章节
-                        break
                     content = self.fetch_content(resp2.text)
                     chapter = self.add_chapter(stitle, 'p{:02d}_{:03d}.xhtml'.format(level, idx), content)
                     idx = idx + 1
@@ -296,9 +306,6 @@ class Ebook(object):
             for sec_info in sec_list[:]:
                 stitle, surl = sec_info
                 resp2 = req_get_info(surl, proxies=self.proxy)
-                if resp2 is None:
-                    # 过滤无效的章节
-                    break
                 content = self.fetch_content(resp2.text)
                 chapter = self.add_chapter(stitle, 'p{:02d}_{:03d}.xhtml'.format(level, idx), content)
                 idx = idx + 1
