@@ -7,7 +7,7 @@
 #########################################################################
 
 from bs4 import BeautifulSoup as bs
-from ebook_spider import Ebook
+from Base.EbookBase import Ebook
 import multiprocessing as mp
 
 

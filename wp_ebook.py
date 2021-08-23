@@ -6,11 +6,13 @@
 # Created Time: 2020年01月02日 星期四 18时46分24秒
 #########################################################################
 
-import re
+
 from bs4 import BeautifulSoup as bs
-from ebook_spider import Ebook
 from multiprocessing.dummy import Pool as ThreadPool
 import multiprocessing as mp
+
+
+from Base.EbookBase import Ebook
 
 
 default_headers = {
@@ -91,7 +93,7 @@ if __name__ == '__main__':
         {
             'url': 'https://www.learnhard.cn/',
             'page_num': 3,
-            'book_name': '苦学网',
+            'book_name': '悟空的修炼笔记',
             'author': 'learnhard.cn',
             'id': 'learnhard',
             'lang': 'zh'

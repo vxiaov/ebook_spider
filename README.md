@@ -12,7 +12,7 @@ pip3 install -r requirements.txt
 
 依赖安装成功后，就可以使用了!
 
-当然,您也可以直接执行`python3 ./ebook_spider.py`示例，查看执行效果.
+当然,您也可以直接执行`python3 ./wp_ebook.py`示例，查看执行效果.
 
 如果遇到任何问题或者建议，也可以反馈给我.
 

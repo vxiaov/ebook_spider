@@ -6,10 +6,8 @@
 # Created Time: 2020年01月02日 星期四 18时46分24秒
 #########################################################################
 
-import re
 from bs4 import BeautifulSoup as bs
-from ebook_spider import Ebook
-import requests
+from Base.EbookBase import Ebook
 from multiprocessing.dummy import Pool as ThreadPool
 import multiprocessing as mp
 

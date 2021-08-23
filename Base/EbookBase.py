@@ -85,7 +85,7 @@ default_headers = {
     AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 \
     Safari/537.36'
 }
-default_socks = 'socks5://127.0.0.1:1084'
+default_socks = 'socks5://127.0.0.1:1081'
 
 
 # 从 url 地址获取网页文本内容
@@ -116,28 +116,29 @@ def req_get_info(url, headers=None, proxies="", retry=5, timeout=15):
 
 
 class ImagePlugin(BasePlugin):
+    '''处理图片插件，自动下载图片素材到本地目录'''
     NAME = 'Image Plugin'
-    url_doer = set()  # 重复URL地址记录器
+    url_doer = {}  # 重复URL地址记录器,同时记录文件名
     img_idx = 0    # 命名图片编号
 
     def __init__(self, proxy=""):
         self.proxy = proxy
 
     def fetch_image(self, doc, book, lable_xpath=r"//img", attr='src'):
-        '''图片链接下载'''
+        '''图片链接下载处理'''
         for _link in doc.xpath(lable_xpath):
             img_url = _link.get(attr)
             if not img_url.startswith('http'):
                 print(f"img_url:{img_url} invalid! not startswith http")
                 continue
             print(f"xpath:{lable_xpath},attr:{attr}, img_url={img_url}")
-            if img_url not in self.url_doer:
-                self.url_doer.add(img_url)
+            img_url = re.sub(r'\?.*', '', img_url)     # 过滤?及其后参数请求信息#
+            if self.url_doer.get(img_url) is None:
                 resp = req_get_info(img_url, proxies=self.proxy)
                 if resp is None:
+                    print(f"Warning: image {img_url} lost!")
                     continue
                 img_item = epub.EpubImage()
-                img_url = re.sub(r'\?.*', '', img_url)     # 过滤?及其后参数请求信息#
                 file_name = '{:03d}_{}'.format(
                     self.img_idx, img_url.rsplit('/', maxsplit=1)[1]
                 )
@@ -146,12 +147,10 @@ class ImagePlugin(BasePlugin):
                 img_item.set_content(resp.content)
                 book.add_item(img_item)
                 _link.set(attr, file_name)
+                self.url_doer[img_url] = file_name
             else:
                 print("already downloaded url:", img_url)
-                img_url = re.sub(r'\?.*', '', img_url)     # 过滤?及其后参数请求信息#
-                file_name = '{:03d}_{}'.format(
-                    self.img_idx, img_url.rsplit('/', maxsplit=1)[1]
-                )
+                file_name = self.url_doer[img_url]
                 _link.set('src', file_name)
         return doc
 
@@ -167,7 +166,9 @@ class ImagePlugin(BasePlugin):
 
 
 class Ebook(object):
-    # 电子书制作
+    '''
+    制作电子书
+    '''
     def __init__(self, params, outdir="./", proxy=""):
         if not isinstance(params, dict):
             raise TypeError("params type error! not dict type.")
@@ -237,7 +238,11 @@ class Ebook(object):
         return c1
 
     def fetch_book(self):
-        '''制作电子书主流程'''
+        '''
+        制作电子书主流程
+        1. 获取所有章链接
+        2. 按章获取所有小节链接
+        '''
         book = self.create_book()
         self.set_plugin(ImagePlugin(self.proxy))
         total_toc = self.fetch_all_chapter()
@@ -294,6 +299,7 @@ class Ebook(object):
                 level += 1
                 for sec_info in sec_list[:]:
                     stitle, surl = sec_info
+                    print(f"DEBUG: {stitle}, {surl}")
                     resp2 = req_get_info(surl, proxies=self.proxy)
                     content = self.fetch_content(resp2.text)
                     chapter = self.add_chapter(stitle, 'p{:02d}_{:03d}.xhtml'.format(level, idx), content)
@@ -305,6 +311,7 @@ class Ebook(object):
             level += 1
             for sec_info in sec_list[:]:
                 stitle, surl = sec_info
+                print(f"DEBUG: {stitle}, {surl}")
                 resp2 = req_get_info(surl, proxies=self.proxy)
                 content = self.fetch_content(resp2.text)
                 chapter = self.add_chapter(stitle, 'p{:02d}_{:03d}.xhtml'.format(level, idx), content)
