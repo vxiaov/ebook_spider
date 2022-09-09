@@ -100,7 +100,7 @@ if __name__ == '__main__':
             'lang': 'zh'
         },
     ]
-    ctx = mp.get_context('fork')
+    ctx = mp.get_context('spawn')
     p_list = []
     for params in start_urls[:]:
         ebook = WebEbook(params, outdir="./")
