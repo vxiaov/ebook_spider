@@ -86,7 +86,7 @@ default_headers = {
     AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 \
     Safari/537.36'
 }
-default_socks = 'socks5://127.0.0.1:1248'
+default_socks = 'socks5://127.0.0.1:1081'
 
 
 # 从 url 地址获取网页文本内容
