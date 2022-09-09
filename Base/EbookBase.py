@@ -5,6 +5,7 @@
 # mail: next4nextjob@gmail.com
 # Created Time: 2020年01月02日 星期四 18时46分24秒
 #########################################################################
+from ast import While
 import time
 import re
 import requests
@@ -85,11 +86,11 @@ default_headers = {
     AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 \
     Safari/537.36'
 }
-default_socks = 'socks5://127.0.0.1:1081'
+default_socks = 'socks5://127.0.0.1:1248'
 
 
 # 从 url 地址获取网页文本内容
-def req_get_info(url, headers=None, proxies="", retry=5, timeout=15):
+def req_get_info(url, headers=None, proxies="", timeout=15):
     '''
     发送requests请求模块，最多尝试3次
     '''
@@ -104,14 +105,14 @@ def req_get_info(url, headers=None, proxies="", retry=5, timeout=15):
             'http': proxies,
             'https': proxies,
         }
-    for _ in range(retry):
+    while True:
         try:
             resp = requests.get(url, proxies=proxies, headers=headers, timeout=timeout)
             resp.encoding = 'utf-8'
             print(resp.status_code, url)
             return resp
         except Exception as e:
-            print('retry:', _, 'url:', url, 'proxies=', proxies, 'requests error:', str(e))
+            print('url:', url, 'proxies=', proxies, 'requests error:', str(e))
             time.sleep(0.5)
     return None
 
